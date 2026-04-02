@@ -133,7 +133,7 @@ local-meeting-assistant/
 │   ├── llama.cpp/            # LLM inference (git submodule, built via ExternalProject)
 │   ├── googletest/           # Testing framework (git submodule)
 │   └── json.hpp              # nlohmann/json (single header)
-├── config.json               # Runtime configuration
+├── config.example.json               # Runtime configuration
 ├── setup.sh                  # Build + dist script
 └── CMakeLists.txt
 ```

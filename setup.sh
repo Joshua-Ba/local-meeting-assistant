@@ -12,7 +12,7 @@ echo "Copying binary..."
 cp build/local-meeting-assistant dist/
 
 echo "Copying config..."
-cp config.json dist/
+cp config.example.json dist/config.json
 
 echo "Copying shared libraries..."
 mkdir -p dist/models dist/lib
@@ -41,4 +41,4 @@ echo "Done! Copy your LLM model into dist/models/:"
 echo "  cp models/Qwen3-8B-Q4_K_M.gguf dist/models/"
 echo ""
 echo "Then run:"
-echo "  cd dist && ./local-meeting-assistant config.json"
+echo "  cd dist && ./local-meeting-assistant"
