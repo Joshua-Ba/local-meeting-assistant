@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <filesystem>
 
 #include "src/ring_buffer.h"
 #include "src/audio_capture.h"
@@ -46,6 +47,7 @@ void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& ass
 
 
 int main(int argc, char* argv[]) {
+    std::filesystem::current_path(std::filesystem::path(argv[0]).parent_path());
     std::string config_path = (argc > 1) ? argv[1] : "config.json";
     auto config = Config::load(config_path);
 

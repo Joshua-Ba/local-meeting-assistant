@@ -9,7 +9,7 @@ echo "Creating dist folder..."
 mkdir -p dist/models
 
 echo "Copying binary..."
-cp build/conversationAssist dist/
+cp build/local-meeting-assistant dist/
 
 echo "Copying config..."
 cp config.json dist/
@@ -30,7 +30,7 @@ cp build/extern/whisper.cpp/ggml/src/ggml-blas/libggml-blas.0.dylib dist/lib/
 cp build/extern/whisper.cpp/ggml/src/ggml-blas/libggml-blas.dylib dist/lib/
 
 echo "Setting rpath..."
-install_name_tool -add_rpath @executable_path/lib dist/conversationAssist
+install_name_tool -add_rpath @executable_path/lib dist/local-meeting-assistant
 
 echo "Downloading whisper model..."
 ./extern/whisper.cpp/models/download-ggml-model.sh base
@@ -41,4 +41,4 @@ echo "Done! Copy your LLM model into dist/models/:"
 echo "  cp models/Qwen3-8B-Q4_K_M.gguf dist/models/"
 echo ""
 echo "Then run:"
-echo "  cd dist && ./conversationAssist config.json"
+echo "  cd dist && ./local-meeting-assistant config.json"

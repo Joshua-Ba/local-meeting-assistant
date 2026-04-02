@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(conversationAssist)
+project(local-meeting-assistant)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -34,17 +34,17 @@ set_source_files_properties(src/llm_engine.cpp PROPERTIES
         INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/llama_install/include
 )
 add_subdirectory(extern/whisper.cpp)
-add_executable(conversationAssist main.cpp
+add_executable(local-meeting-assistant main.cpp
         src/ring_buffer.cpp
         src/audio_capture.cpp
         src/llm_engine.cpp
         src/meeting_assistant.cpp
         src/config.cpp)
 
-add_dependencies(conversationAssist llama_external)
+add_dependencies(local-meeting-assistant llama_external)
 
-target_include_directories(conversationAssist PRIVATE src)
-target_link_libraries(conversationAssist PRIVATE whisper
+target_include_directories(local-meeting-assistant PRIVATE src)
+target_link_libraries(local-meeting-assistant PRIVATE whisper
         "-framework CoreAudio"
         "-framework CoreFoundation"
         "-framework Metal"

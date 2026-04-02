@@ -1,4 +1,4 @@
-# conversationAssist
+# local-meeting-assistant
 
 A local, privacy-first meeting assistant that captures system audio, transcribes it in real-time using whisper.cpp, and generates live summaries and meeting notes using a local LLM via llama.cpp. Everything runs on your machine — no cloud, no API keys.
 
@@ -14,8 +14,8 @@ A local, privacy-first meeting assistant that captures system audio, transcribes
 ### Clone
 
 ```bash
-git clone --recursive https://github.com/dein-user/conversationAssist.git
-cd conversationAssist
+git clone --recursive https://github.com/Joshua-Ba/local-meeting-assistant.git
+cd local-meeting-assistant
 ```
 
 ### Already cloned without submodules?
@@ -104,7 +104,7 @@ All settings are in `config.json` (or `dist/config.json` when using the dist fol
 
 ```bash
 cd dist
-./conversationAssist config.json
+./local-meeting-assistant config.json
 ```
 
 Press **Enter** to stop the recording and generate the final meeting summary.
@@ -120,7 +120,7 @@ Press **Enter** to stop the recording and generate the final meeting summary.
 ## Project Structure
 
 ```
-conversationAssist/
+local-meeting-assistant/
 ├── main.cpp                  # Entry point, audio loop thread, final summary
 ├── src/
 │   ├── ring_buffer.h/.cpp    # Lock-free ring buffer for audio samples
