@@ -1,0 +1,7 @@
+/models/
+/build/
+/cmake-build-debug/
+/dist
+.clangd
+.idea
+.DS_Store

@@ -1,0 +1,9 @@
+[submodule "extern/whisper.cpp"]
+	path = extern/whisper.cpp
+	url = https://github.com/ggml-org/whisper.cpp.git
+[submodule "extern/googletest"]
+	path = extern/googletest
+	url = https://github.com/google/googletest.git
+[submodule "extern/llama.cpp"]
+	path = extern/llama.cpp
+	url = https://github.com/ggml-org/llama.cpp.git

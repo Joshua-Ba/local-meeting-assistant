@@ -1,0 +1,23 @@
+{
+  "model_path": "models/Qwen3.5-9B-Q4_K_M.gguf",
+  "whisper_model": "models/ggml-base.bin",
+  "context_size": 32768,
+  "batch_size": 8192,
+  "temperature": 0.7,
+  "top_p": 0.8,
+  "top_k": 20,
+  "presence_penalty": 1.5,
+  "segments_per_summary": 8,
+  "prompts": {
+    "snippet_summary": "Summarize the provided transcript in 3-5 concise bullet points. NEVER invent information. Use ONLY what is in the text. If a sentence is cut off mid-way, do not create a bullet point for it.",
+    "full_summary": "Summarize the provided transcript in up to 40 concise bullet points. NEVER invent information. Use ONLY what is in the text.",
+    "check_summary": "Below is a transcript. The user will provide bullet points based on it. Your task is to evaluate and improve the bullet points. Use ONLY information from the transcript. You ONLY can add, remove and improve bullet points from the list. Return ONLY the improved list of bullet points.\nTranscript:\n"
+  },
+  "audio": {
+    "blackhole_device_name": "BlackHole",
+    "blackhole_sample_rate": 48000,
+    "blackhole_channels": 2,
+    "whisper_sample_rate": 16000,
+    "chunk_seconds": 5
+  }
+}
