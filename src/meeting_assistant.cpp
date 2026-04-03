@@ -2,7 +2,7 @@
 
 
 
-MeetingAssistant::MeetingAssistant(const Config &config) :engin(config), config(config) {
+MeetingAssistant::MeetingAssistant(const Config &config) :engin(config), config(config){
 }
 
 

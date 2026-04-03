@@ -45,11 +45,13 @@ bool LlmEngine::is_loaded() const {
 
 std::optional<std::string> LlmEngine::generate(const std::string& input, int max_tokens, const std::string& prompt) {
     if (!is_loaded()) return std::nullopt;
-
     auto* vocab = static_cast<const llama_vocab*>(vocab_);
     auto* ctx = static_cast<llama_context*>(ctx_);
     auto* smpl = static_cast<llama_sampler*>(sampler_);
     auto* model = static_cast<llama_model*>(model_);
+
+    auto mem = llama_get_memory(ctx);
+    llama_memory_clear(mem, true);
 
     // chat template anwenden
     llama_chat_message messages[] = {

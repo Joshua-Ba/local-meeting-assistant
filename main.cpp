@@ -4,6 +4,7 @@
 #include <thread>
 #include <filesystem>
 
+#include "src/utils.h"
 #include "src/ring_buffer.h"
 #include "src/audio_capture.h"
 #include "extern/whisper.cpp/include/whisper.h"
@@ -11,9 +12,10 @@
 #include "src/config.h"
 
 
-void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& assistant, whisper_context* ctx, whisper_full_params& wparams, Config& config) {
+void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& assistant, whisper_context* ctx, whisper_full_params& wparams, Config& config, const std::string &session_id) {
     int counter = 0;
-    int num_segs_per_summary = config.segments_per_summary;
+    const int num_segments_per_summary = config.segments_per_summary;
+    std::ofstream transcript_file(get_filepath("output", "transcript", session_id), std::ios::app);
     std::string new_text_seg;
 
     while (!token.stop_requested()) {
@@ -23,10 +25,12 @@ void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& ass
             whisper_full(ctx, wparams, data.data(), config.chunk_samples);
             int num_seg = whisper_full_n_segments(ctx);
             for (int i = 0; i < num_seg; i++) {
-                new_text_seg.append(whisper_full_get_segment_text(ctx, i));
+                auto text = whisper_full_get_segment_text(ctx, i);
+                new_text_seg.append(text);
+                transcript_file << text << std::flush;
             }
             counter += 1;
-            if (counter >= num_segs_per_summary) {
+            if (counter >= num_segments_per_summary) {
                 counter = 0;
                 assistant.add_segment(new_text_seg);
                 auto summary = assistant.summarize_current_segment();
@@ -49,7 +53,9 @@ void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& ass
 int main(int argc, char* argv[]) {
     std::filesystem::current_path(std::filesystem::path(argv[0]).parent_path());
     std::string config_path = (argc > 1) ? argv[1] : "config.json";
+    std::filesystem::create_directories("output");
     auto config = Config::load(config_path);
+    auto session_id = generate_session_id();
 
     RingBuffer ringBuffer(config.ringbuffer_size);
     AudioCapture audioCapture(&ringBuffer, config.audio_device, config.resample_factor);
@@ -69,7 +75,7 @@ int main(int argc, char* argv[]) {
 
     audioCapture.start();
 
-    std::jthread worker(audio_loop, std::ref(ringBuffer), std::ref(assistant), ctx, std::ref(wparams), std::ref(config));
+    std::jthread worker(audio_loop, std::ref(ringBuffer), std::ref(assistant), ctx, std::ref(wparams), std::ref(config), std::ref(session_id));
     std::cin.get();
     worker.request_stop();
 
@@ -78,6 +84,8 @@ int main(int argc, char* argv[]) {
     std::cout << assistant.get_full_text() << std::endl;
     auto result = assistant.full_summary_checked();
     if (result) {
+        std::ofstream file(get_filepath("output", "summary", session_id));
+        file << *result;
         std::cout << *result << std::endl;
     }
     else {
