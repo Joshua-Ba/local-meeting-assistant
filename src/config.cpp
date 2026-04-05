@@ -23,6 +23,13 @@ Config Config::load(const std::string& path) {
     c.chunk_size_seconds = j["audio"]["chunk_seconds"];
     c.audio_device = j["audio"]["blackhole_device_name"];
 
+    c.segmentation_model = j["diarization"]["segmentation_model"];
+    c.embedding_model = j["diarization"]["embedding_model"];
+    c.speaker_threshold = j["diarization"]["speaker_threshold"];
+    c.min_segment_duration = j["diarization"]["min_segment_duration"];
+    c.merge_gap = j["diarization"]["merge_gap"];
+
+
     // Derived values calculated from config, not stored in JSON
     c.resample_factor = (c.blackhole_sample_rate / c.whisper_sample_rate) * c.blackhole_channels;
     c.chunk_samples = c.whisper_sample_rate * c.chunk_size_seconds;

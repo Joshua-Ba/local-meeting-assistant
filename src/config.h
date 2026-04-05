@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <fstream>
+
+
 struct Config {
     std::string model_path;
     std::string whisper_model;
@@ -22,6 +24,11 @@ struct Config {
     int resample_factor;
     int chunk_samples;
     int ringbuffer_size;
+    std::string segmentation_model;
+    std::string embedding_model;
+    float speaker_threshold;
+    float min_segment_duration;
+    float merge_gap;
 
     static Config load(const std::string& path);
 };

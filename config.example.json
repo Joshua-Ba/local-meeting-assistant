@@ -19,5 +19,12 @@
     "blackhole_channels": 2,
     "whisper_sample_rate": 16000,
     "chunk_seconds": 5
+  },
+  "diarization": {
+    "segmentation_model": "models/diarization/sherpa-onnx-pyannote-segmentation-3-0/model.onnx",
+    "embedding_model": "models/diarization/ecapa_tdnn512.onnx",
+    "speaker_threshold": 0.25,
+    "min_segment_duration": 0.5,
+    "merge_gap": 0.5
   }
 }

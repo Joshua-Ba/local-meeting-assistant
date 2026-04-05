@@ -39,9 +39,13 @@ add_executable(local-meeting-assistant main.cpp
         src/audio_capture.cpp
         src/llm_engine.cpp
         src/meeting_assistant.cpp
-        src/config.cpp)
+        src/config.cpp
+        src/speaker_diarizer.cpp)
 
 add_dependencies(local-meeting-assistant llama_external)
+
+set(ONNX_DIR ${CMAKE_SOURCE_DIR}/extern/onnxruntime)
+target_include_directories(local-meeting-assistant PRIVATE ${ONNX_DIR}/include)
 
 target_include_directories(local-meeting-assistant PRIVATE src)
 target_link_libraries(local-meeting-assistant PRIVATE whisper
@@ -57,4 +61,5 @@ target_link_libraries(local-meeting-assistant PRIVATE whisper
         ${CMAKE_BINARY_DIR}/llama_install/lib/libggml-cpu.a
         ${CMAKE_BINARY_DIR}/llama_install/lib/libggml-metal.a
         ${CMAKE_BINARY_DIR}/llama_install/lib/libggml-blas.a
+        ${ONNX_DIR}/lib/libonnxruntime.dylib
 )

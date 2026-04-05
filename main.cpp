@@ -4,6 +4,7 @@
 #include <thread>
 #include <filesystem>
 
+#include "src/speaker_diarizer.h"
 #include "src/utils.h"
 #include "src/ring_buffer.h"
 #include "src/audio_capture.h"
@@ -18,11 +19,16 @@ void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& ass
     std::ofstream transcript_file(get_filepath("output", "transcript", session_id), std::ios::app);
     std::string new_text_seg;
 
+    SpeakerDiarizer diarizer(config);
+
+    float chunk_duration = static_cast<float>(config.chunk_samples) / static_cast<float>(config.whisper_sample_rate);
+
     while (!token.stop_requested()) {
         std::vector<float> data;
         if (buffer.size() >= config.chunk_samples) {
             buffer.batch_read(data, config.chunk_samples);
             whisper_full(ctx, wparams, data.data(), config.chunk_samples);
+            diarizer.segment(data, chunk_duration);
             int num_seg = whisper_full_n_segments(ctx);
             for (int i = 0; i < num_seg; i++) {
                 auto text = whisper_full_get_segment_text(ctx, i);
@@ -44,6 +50,7 @@ void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& ass
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
+
     if (!new_text_seg.empty()) {
         assistant.add_segment(new_text_seg);
     }
@@ -51,6 +58,8 @@ void audio_loop(std::stop_token token, RingBuffer& buffer, MeetingAssistant& ass
 
 
 int main(int argc, char* argv[]) {
+
+
     std::filesystem::current_path(std::filesystem::path(argv[0]).parent_path());
     std::string config_path = (argc > 1) ? argv[1] : "config.json";
     std::filesystem::create_directories("output");
