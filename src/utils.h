@@ -1,15 +1,26 @@
+// utils.h
+//
+// Small inline helpers used across the application.
+
 #pragma once
 
 #include <chrono>
 #include <format>
 #include <string>
+#include <string_view>
 
 
+// Build a session ID from the current wall-clock time. Format:
+// "YYYY_MM_DD_HH_MM". Used as a suffix on transcript/RTTM/summary files.
 inline std::string generate_session_id() {
     const auto now = std::chrono::system_clock::now();
     return std::format("{:%Y_%m_%d_%H_%M}", now);
 }
 
-inline std::string get_filepath(std::string_view path, std::string_view name, std::string_view session_id) {
+
+// Compose an output file path "<path>/<name>_<session_id>.txt".
+inline std::string get_filepath(std::string_view path,
+                                std::string_view name,
+                                std::string_view session_id) {
     return std::format("{}/{}_{}.txt", path, name, session_id);
 }

@@ -18,6 +18,17 @@
     "blackhole_sample_rate": 48000,
     "blackhole_channels": 2,
     "whisper_sample_rate": 16000,
-    "chunk_seconds": 5
+    "chunk_seconds": 10
+  },
+  "diarization": {
+    "segmentation_model": "models/diarization/sherpa-onnx-pyannote-segmentation-3-0/model.onnx",
+    "embedding_model": "models/diarization/wespeaker_en_voxceleb_resnet34_LM.onnx",
+    "min_segment_duration": 0.5,
+    "merge_gap": 0.5,
+    "n_mels":80,
+    "window_length_ms": 25,
+    "step_width_ms": 10,
+    "clustering_threshold": 0.5,
+    "num_speakers_hint": -1
   }
 }

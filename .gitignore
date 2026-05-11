@@ -2,6 +2,8 @@
 /build/
 /cmake-build-debug/
 /dist
+/extern
 .clangd
 .idea
 .DS_Store
+.wav

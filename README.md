@@ -82,8 +82,43 @@ cp models/Qwen3.5-9B-Q4_K_M.gguf dist/models/
 ### Manual build
 
 ```bash
-cmake -B build
-cmake --build build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target local-meeting-assistant
+```
+
+## Tests
+
+The project includes GoogleTest/CTest unit tests for the core logic:
+
+- config loading and derived values
+- ring buffer behavior
+- utility path/session helpers
+- CoreAudio callback resampling
+- LLM and meeting-assistant unloaded-model behavior
+- mel feature extraction pipeline
+- speaker diarization powerset decoding, Pyannote input geometry, sliding-window activity averaging, binarization, parsing, cleanup, overlap handling, speaker lookup, and agglomerative centroid clustering
+
+Build and run the tests with:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target local-meeting-assistant-tests
+ctest --test-dir build --output-on-failure
+```
+
+For a quicker loop after CMake has already been configured:
+
+```bash
+cmake --build build --target local-meeting-assistant-tests
+ctest --test-dir build --output-on-failure
+```
+
+The tests do not require downloaded Whisper, LLM, or ONNX model files. Model-backed classes are tested through their safe unloaded/failure paths, while pure logic is tested directly.
+
+To disable test targets during configuration:
+
+```bash
+cmake -S . -B build -DBUILD_TESTING=OFF
 ```
 
 ## Configuration
@@ -107,15 +142,32 @@ cd dist
 ./local-meeting-assistant config.json
 ```
 
-Press **Enter** to stop the recording and generate the final meeting summary.
+Press **Enter** to stop the recording. After the stop, the captured audio is diarized offline, the final transcript is written with speaker labels, and RTTM is written to `output/diarization_<session-id>.rttm`.
+
+### Diarization RTTM comparison
+
+To generate a C++ RTTM file for comparison with a pyannote `write_rttm` output:
+
+```bash
+cd dist
+./local-meeting-assistant --test path/to/audio.wav path/to/cpp-output.rttm
+./local-meeting-assistant --test path/to/audio.wav path/to/cpp-output.rttm 2
+```
+
+If the output path is omitted, the program writes `<audio>.cpp.rttm` next to the input audio path. The optional final argument fixes the expected speaker count, for example `2`; when it is omitted, the diarizer uses `num_speakers_hint` from `config.json` or auto mode. RTTM lines use the standard pyannote-compatible shape:
+
+```text
+SPEAKER <uri> 1 <start> <duration> <NA> <NA> SPEAKER_00 <NA> <NA>
+```
 
 ## How it works
 
 1. System audio is captured via BlackHole and CoreAudio
 2. Audio is resampled to 16kHz mono (configurable in `config.json`)
 3. Audio chunks are transcribed by whisper.cpp at a configurable interval
-4. After a configurable number of segments, the LLM generates a brief summary
-5. When you stop the program, the full transcript is analyzed and a comprehensive summary is generated
+4. The raw audio and Whisper segments are accumulated for final processing
+5. When you stop the program, speaker diarization runs once over the complete audio
+6. The final speaker-labeled transcript is summarized by the LLM
 
 ## Project Structure
 
@@ -127,10 +179,14 @@ local-meeting-assistant/
 │   ├── audio_capture.h/.cpp  # CoreAudio / BlackHole integration
 │   ├── llm_engine.h/.cpp     # llama.cpp wrapper (isolated from whisper's ggml)
 │   ├── meeting_assistant.h/.cpp  # Prompt management, summarization logic
+│   ├── speaker_diarizer.h/.cpp   # ONNX speaker segmentation and clustering
+│   ├── MelFeatureExtractor.h/.cpp # Mel feature extraction for embeddings
 │   └── config.h/.cpp         # JSON config file parser
+├── tests/                    # GoogleTest unit tests
 ├── extern/
 │   ├── whisper.cpp/          # Speech-to-text (git submodule)
 │   ├── llama.cpp/            # LLM inference (git submodule, built via ExternalProject)
+│   ├── kaldi-native-fbank/   # Kaldi-compatible fbank features for embeddings
 │   ├── googletest/           # Testing framework (git submodule)
 │   └── json.hpp              # nlohmann/json (single header)
 ├── config.example.json               # Runtime configuration
