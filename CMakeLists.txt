@@ -34,27 +34,51 @@ set_source_files_properties(src/llm_engine.cpp PROPERTIES
         INCLUDE_DIRECTORIES ${CMAKE_BINARY_DIR}/llama_install/include
 )
 add_subdirectory(extern/whisper.cpp)
-add_executable(local-meeting-assistant main.cpp
+
+set(KALDI_NATIVE_FBANK_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(KALDI_NATIVE_FBANK_BUILD_PYTHON OFF CACHE BOOL "" FORCE)
+set(KALDI_NATIVE_FBANK_ENABLE_CHECK OFF CACHE BOOL "" FORCE)
+include_directories(${CMAKE_SOURCE_DIR}/extern/kaldi-native-fbank)
+if(DEFINED BUILD_SHARED_LIBS)
+        set(_LOCAL_MEETING_ASSISTANT_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+        set(_LOCAL_MEETING_ASSISTANT_BUILD_SHARED_LIBS_WAS_DEFINED TRUE)
+endif()
+set(BUILD_SHARED_LIBS OFF)
+add_subdirectory(extern/kaldi-native-fbank EXCLUDE_FROM_ALL)
+if(_LOCAL_MEETING_ASSISTANT_BUILD_SHARED_LIBS_WAS_DEFINED)
+        set(BUILD_SHARED_LIBS ${_LOCAL_MEETING_ASSISTANT_BUILD_SHARED_LIBS})
+else()
+        unset(BUILD_SHARED_LIBS)
+endif()
+unset(_LOCAL_MEETING_ASSISTANT_BUILD_SHARED_LIBS)
+unset(_LOCAL_MEETING_ASSISTANT_BUILD_SHARED_LIBS_WAS_DEFINED)
+
+set(ONNX_DIR ${CMAKE_SOURCE_DIR}/extern/onnxruntime)
+
+set(LOCAL_MEETING_ASSISTANT_SOURCES
         src/ring_buffer.cpp
         src/audio_capture.cpp
         src/llm_engine.cpp
         src/meeting_assistant.cpp
         src/config.cpp
-        src/speaker_diarizer.cpp)
+        src/wav_io.cpp
+        src/speaker_diarizer.cpp
+        src/MelFeatureExtractor.cpp
+        src/ahc_pyannote.cpp
+)
 
-add_dependencies(local-meeting-assistant llama_external)
-
-set(ONNX_DIR ${CMAKE_SOURCE_DIR}/extern/onnxruntime)
-target_include_directories(local-meeting-assistant PRIVATE ${ONNX_DIR}/include)
-
-target_include_directories(local-meeting-assistant PRIVATE src)
-target_link_libraries(local-meeting-assistant PRIVATE whisper
+add_library(local-meeting-assistant-core STATIC ${LOCAL_MEETING_ASSISTANT_SOURCES})
+add_dependencies(local-meeting-assistant-core llama_external)
+target_include_directories(local-meeting-assistant-core PUBLIC src)
+target_include_directories(local-meeting-assistant-core PUBLIC ${ONNX_DIR}/include)
+target_include_directories(local-meeting-assistant-core PUBLIC extern/kaldi-native-fbank)
+target_link_libraries(local-meeting-assistant-core PUBLIC whisper
         "-framework CoreAudio"
         "-framework CoreFoundation"
         "-framework Metal"
         "-framework MetalKit"
         "-framework Foundation"
-        "-framework Accelerate"
+        kaldi-native-fbank-core
         ${CMAKE_BINARY_DIR}/llama_install/lib/libllama.a
         ${CMAKE_BINARY_DIR}/llama_install/lib/libggml.a
         ${CMAKE_BINARY_DIR}/llama_install/lib/libggml-base.a
@@ -63,3 +87,33 @@ target_link_libraries(local-meeting-assistant PRIVATE whisper
         ${CMAKE_BINARY_DIR}/llama_install/lib/libggml-blas.a
         ${ONNX_DIR}/lib/libonnxruntime.dylib
 )
+
+add_executable(local-meeting-assistant main.cpp)
+target_link_libraries(local-meeting-assistant PRIVATE local-meeting-assistant-core)
+
+include(CTest)
+if(BUILD_TESTING)
+    add_subdirectory(extern/googletest)
+
+    add_executable(local-meeting-assistant-tests
+            tests/ahc_pyannote_test.cpp
+            tests/audio_capture_test.cpp
+            tests/config_test.cpp
+            tests/llm_engine_test.cpp
+            tests/meeting_assistant_test.cpp
+            tests/mel_feature_extractor_test.cpp
+            tests/ring_buffer_test.cpp
+            tests/speaker_diarizer_test.cpp
+            tests/utils_test.cpp
+            tests/wav_io_test.cpp
+    )
+    target_compile_definitions(local-meeting-assistant-tests PRIVATE UNIT_TESTS)
+    target_link_libraries(local-meeting-assistant-tests PRIVATE
+            local-meeting-assistant-core
+            GTest::gtest_main
+    )
+    include(GoogleTest)
+    gtest_discover_tests(local-meeting-assistant-tests
+            PROPERTIES RESOURCE_LOCK local_meeting_assistant_generated_files
+    )
+endif()

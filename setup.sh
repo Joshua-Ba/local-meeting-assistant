@@ -1,53 +1,88 @@
 #!/bin/bash
-set -e
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
+
+BUILD_DIR="${BUILD_DIR:-build}"
+DIST_DIR="${DIST_DIR:-dist}"
+
+if [[ "$BUILD_DIR" = /* ]]; then
+  BUILD_DIR_ABS="$BUILD_DIR"
+else
+  BUILD_DIR_ABS="$ROOT_DIR/$BUILD_DIR"
+fi
 
 echo "Building..."
-cmake -B build
-cmake --build build
+if [[ -d "$BUILD_DIR_ABS" ]]; then
+  stale_cache=""
+  while IFS= read -r cache_file; do
+    cached_source="$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache_file" | head -n 1)"
+    cached_build="$(sed -n 's/^CMAKE_CACHEFILE_DIR:INTERNAL=//p' "$cache_file" | head -n 1)"
+    if [[ -n "$cached_source" && "$cached_source" != "$ROOT_DIR" && "$cached_source" != "$ROOT_DIR"/* ]]; then
+      stale_cache="$cache_file"
+      break
+    fi
+    if [[ -n "$cached_build" && "$cached_build" != "$BUILD_DIR_ABS" && "$cached_build" != "$BUILD_DIR_ABS"/* ]]; then
+      stale_cache="$cache_file"
+      break
+    fi
+  done < <(find "$BUILD_DIR_ABS" -name CMakeCache.txt -print)
+
+  if [[ -n "$stale_cache" ]]; then
+    echo "Existing CMake cache belongs to another checkout: $stale_cache"
+    echo "Removing $BUILD_DIR so CMake can configure this copy cleanly..."
+    rm -rf "$BUILD_DIR_ABS"
+  fi
+fi
+cmake -S "$ROOT_DIR" -B "$BUILD_DIR_ABS" -DCMAKE_BUILD_TYPE=Release
+cmake --build "$BUILD_DIR_ABS" --target local-meeting-assistant
 
 echo "Creating dist folder..."
-mkdir -p dist/models
-mkdir -p models/diarization
+mkdir -p "$DIST_DIR/models"
+mkdir -p "$ROOT_DIR/models/diarization"
 
 echo "Copying binary..."
-cp build/local-meeting-assistant dist/
+cp "$BUILD_DIR_ABS/local-meeting-assistant" "$DIST_DIR/"
 
 echo "Copying config..."
-cp config.example.json dist/config.json
+cp "$ROOT_DIR/config.example.json" "$DIST_DIR/config.json"
 
 echo "Copying shared libraries..."
-mkdir -p dist/models dist/lib
-cp build/extern/whisper.cpp/src/libwhisper.1.dylib dist/lib/
-cp build/extern/whisper.cpp/src/libwhisper.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/libggml.0.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/libggml.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/libggml-base.0.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/libggml-base.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/libggml-cpu.0.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/libggml-cpu.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/ggml-metal/libggml-metal.0.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/ggml-metal/libggml-metal.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/ggml-blas/libggml-blas.0.dylib dist/lib/
-cp build/extern/whisper.cpp/ggml/src/ggml-blas/libggml-blas.dylib dist/lib/
-cp extern/onnxruntime/lib/libonnxruntime*.dylib dist/lib/
+mkdir -p "$DIST_DIR/models" "$DIST_DIR/lib"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/src/libwhisper.1.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/src/libwhisper.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/libggml.0.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/libggml.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/libggml-base.0.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/libggml-base.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/libggml-cpu.0.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/libggml-cpu.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/ggml-metal/libggml-metal.0.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/ggml-metal/libggml-metal.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/ggml-blas/libggml-blas.0.dylib" "$DIST_DIR/lib/"
+cp "$BUILD_DIR_ABS/extern/whisper.cpp/ggml/src/ggml-blas/libggml-blas.dylib" "$DIST_DIR/lib/"
+cp "$ROOT_DIR"/extern/onnxruntime/lib/libonnxruntime*.dylib "$DIST_DIR/lib/"
 
 echo "Setting rpath..."
-install_name_tool -add_rpath @executable_path/lib dist/local-meeting-assistant
+if ! otool -l "$DIST_DIR/local-meeting-assistant" | grep -q "@executable_path/lib"; then
+  install_name_tool -add_rpath @executable_path/lib "$DIST_DIR/local-meeting-assistant"
+fi
 
 echo "Downloading whisper model..."
-./extern/whisper.cpp/models/download-ggml-model.sh base
-cp extern/whisper.cpp/models/ggml-base.bin dist/models/
+"$ROOT_DIR/extern/whisper.cpp/models/download-ggml-model.sh" base
+cp "$ROOT_DIR/extern/whisper.cpp/models/ggml-base.bin" "$DIST_DIR/models/"
 
 echo "Downloading speaker diarization models..."
-mkdir -p dist/models/diarization
+mkdir -p "$DIST_DIR/models/diarization"
 
 # Speaker Segmentation (Pyannote 3.0, ~5MB)
 curl -L "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2" -o /tmp/segmentation.tar.bz2
-tar xjf /tmp/segmentation.tar.bz2 -C dist/models/diarization/
+tar xjf /tmp/segmentation.tar.bz2 -C "$DIST_DIR/models/diarization/"
 rm /tmp/segmentation.tar.bz2
 
 # Speaker Embedding (wespeaker ECAPA-TDNN, ~25MB)
-curl -L "https://huggingface.co/Wespeaker/wespeaker-ecapa-tdnn512-LM/resolve/main/voxceleb_ECAPA512_LM.onnx" -o dist/models/diarization/ecapa_tdnn512.onnx
+curl -L "https://huggingface.co/Wespeaker/wespeaker-ecapa-tdnn512-LM/resolve/main/voxceleb_ECAPA512_LM.onnx" -o "$DIST_DIR/models/diarization/ecapa_tdnn512.onnx"
 
 echo ""
 echo "Done! Copy your LLM model into dist/models/:"
