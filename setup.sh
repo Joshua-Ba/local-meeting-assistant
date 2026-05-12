@@ -81,8 +81,9 @@ curl -L "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segment
 tar xjf /tmp/segmentation.tar.bz2 -C "$DIST_DIR/models/diarization/"
 rm /tmp/segmentation.tar.bz2
 
-# Speaker Embedding (wespeaker ECAPA-TDNN, ~25MB)
-curl -L "https://huggingface.co/Wespeaker/wespeaker-ecapa-tdnn512-LM/resolve/main/voxceleb_ECAPA512_LM.onnx" -o "$DIST_DIR/models/diarization/ecapa_tdnn512.onnx"
+
+# Speaker Embedding (wespeaker ResNet34, ~25MB)
+curl -L "https://huggingface.co/Wespeaker/wespeaker-voxceleb-resnet34-LM/resolve/main/voxceleb_resnet34_LM.onnx" -o "$DIST_DIR/models/diarization/wespeaker_en_voxceleb_resnet34_LM.onnx"
 
 echo ""
 echo "Done! Copy your LLM model into dist/models/:"
